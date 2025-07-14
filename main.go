@@ -10,6 +10,8 @@ import (
 	"time"
 )
 
+var totalSent int
+
 func main() {
 
 	for i := 1; i <= 5; i++ {
@@ -21,6 +23,8 @@ func main() {
 		sendLogToLoki("¡Fatal amigo!", "fatal", "test")
 
 	}
+
+	fmt.Printf("Total de logs enviados: %d\n", totalSent)
 
 	getLogsFromLoki(`{app="test"}`)
 	getLatestLogsFromLokiInstant(`{app="test"}`)
@@ -50,6 +54,7 @@ func sendLogToLoki(message, level, app string) {
 		fmt.Println("Error al enviar a Loki:", err)
 	} else {
 		defer resp.Body.Close()
+		totalSent++
 		fmt.Println("Log enviado:", message, "| Nivel:", level, "| Status:", resp.Status)
 	}
 }
@@ -87,11 +92,15 @@ func getLogsFromLoki(logql string) {
 	}
 
 	fmt.Println("\nLogs recibidos desde Loki:")
-
 	results := parsed["data"].(map[string]interface{})["result"].([]interface{})
+
+	logCount := 0
+
 	for _, r := range results {
 		entry := r.(map[string]interface{})
 		values := entry["values"].([]interface{})
+		logCount += len(values)
+
 		for _, val := range values {
 			pair := val.([]interface{})
 			timestamp := pair[0].(string)
@@ -99,6 +108,8 @@ func getLogsFromLoki(logql string) {
 			fmt.Printf("%s ms |====> %s\n", timestamp, message)
 		}
 	}
+
+	fmt.Printf("Total logs recuperados (query_range): %d\n", logCount)
 }
 
 func getLatestLogsFromLokiInstant(logql string) {
@@ -126,11 +137,15 @@ func getLatestLogsFromLokiInstant(logql string) {
 	}
 
 	fmt.Println("\nLogs recientes desde Loki (consulta instantánea):")
-
 	results := parsed["data"].(map[string]interface{})["result"].([]interface{})
+
+	logCount := 0
+
 	for _, r := range results {
 		entry := r.(map[string]interface{})
 		values := entry["values"].([]interface{})
+		logCount = logCount + len(values)
+
 		for _, val := range values {
 			pair := val.([]interface{})
 			timestamp := pair[0].(string)
@@ -138,4 +153,6 @@ func getLatestLogsFromLokiInstant(logql string) {
 			fmt.Printf("%s ms |====> %s\n", timestamp, message)
 		}
 	}
+
+	fmt.Printf("Total logs recuperados (consulta instantánea): %d\n", logCount)
 }
