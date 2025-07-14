@@ -11,11 +11,16 @@ import (
 )
 
 func main() {
-	sendLogToLoki("¡Hola amigo!", "info", "test")
-	sendLogToLoki("¡Debug amigo!", "debug", "test")
-	sendLogToLoki("¡Advertencia amigo!", "warn", "test")
-	sendLogToLoki("¡Error amigo!", "error", "test")
-	sendLogToLoki("¡Fatal amigo!", "fatal", "test")
+
+	for i := 1; i <= 5; i++ {
+		fmt.Println("Grupo de logs:", i)
+		sendLogToLoki("¡Hola amigo!", "info", "test")
+		sendLogToLoki("¡Debug amigo!", "debug", "test")
+		sendLogToLoki("¡Advertencia amigo!", "warn", "test")
+		sendLogToLoki("¡Error amigo!", "error", "test")
+		sendLogToLoki("¡Fatal amigo!", "fatal", "test")
+
+	}
 
 	getLogsFromLoki(`{app="test"}`)
 	getLatestLogsFromLokiInstant(`{app="test"}`)
@@ -59,7 +64,7 @@ func getLogsFromLoki(logql string) {
 	params := url.Values{}
 	params.Set("query", logql)
 
-	params.Set("limit", "10")
+	params.Set("limit", "10") //limit de logs
 	params.Set("start", fmt.Sprintf("%d", start))
 	params.Set("end", fmt.Sprintf("%d", end))
 	params.Set("direction", "backward")
