@@ -6,6 +6,8 @@ services:
     ports:
       - "3100:3100"
     command: -config.file=/etc/loki/local-config.yaml
+    volumes:
+      - ./loki-data:/loki
 
   grafana:
     image: grafana/grafana:10.4.2
@@ -13,3 +15,12 @@ services:
       - "3000:3000"
     environment:
       - GF_SECURITY_ADMIN_PASSWORD=admin
+
+  promtail:
+    image: grafana/promtail:2.9.0
+    volumes:
+      - ./promtail-test/logs:/var/log/mylogs
+      - ./promtail-config.yml:/etc/promtail/config.yml
+    command: -config.file=/etc/promtail/config.yml
+    depends_on:
+      - loki

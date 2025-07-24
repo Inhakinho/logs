@@ -54,15 +54,15 @@ func sendLogToLoki(message, level, app string) {
 	timestamp := fmt.Sprintf("%d", time.Now().UnixNano())
 
 	entropy := ulid.Monotonic(rand.Reader, 0)
-	uuid := ulid.MustNew(ulid.Timestamp(time.Now()), entropy).String()
+	uuid := ulid.MustNew(ulid.Timestamp(time.Now()), entropy).String() //se genera un archivo log con uuid a partir de la hora actual
 
 	payload := map[string]interface{}{
 		"streams": []map[string]interface{}{
 			{
 				"stream": map[string]string{
-					"level":    level,
-					"app":      app,
-					"fileUUID": uuid,
+					"level":     level,
+					"app":       app,
+					"file_uuid": uuid,
 				},
 				"values": [][]string{
 					{timestamp, message},
@@ -103,7 +103,7 @@ func getLogsByUUID(fileUUID string) ([]LogEntry, error) {
 	start := now.Add(-10 * time.Minute).UnixNano()
 	end := now.UnixNano()
 
-	logql := fmt.Sprintf(`{fileUUID="%s"}`, fileUUID)
+	logql := fmt.Sprintf(`{file_uuid="%s"}`, fileUUID)
 
 	params := url.Values{}
 	params.Set("query", logql)

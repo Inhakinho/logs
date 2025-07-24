@@ -2,10 +2,13 @@
 
 Este proyecto es una pequeña prueba de cómo:
 
+- Generar logs tanto desde código Go como desde consola.
 - Enviar logs a **Grafana Loki** mediante HTTP.
 - Consultar logs históricos (rango de tiempo).
 - Consultar logs recientes (consulta instantánea).
-- Todo ello implementado en Go, de forma sencilla y funcional.
+- Usar **Promtail** para enviar automáticamente logs de archivos locales a Loki.
+- Permitir recuperar logs filtrados por un `fileUUID`.
+
 
 ---
 
@@ -14,6 +17,7 @@ Este proyecto es una pequeña prueba de cómo:
 - [📦 Estructura del proyecto](#-estructura-del-proyecto)
 - [🚀 Cómo ejecutar](#-cómo-ejecutar)
 - [🐳 Docker Compose](#-docker-compose)
+- [📂 Promtail](#-promtail)
 - [🧪 Consultas LogQL](#-consultas-logql)
 - [📘 Requisitos](#-requisitos)
 - [📦 Licencia](#-licencia)
@@ -24,24 +28,26 @@ Este proyecto es una pequeña prueba de cómo:
 
 ### `main.go`
 
-Este archivo contiene 3 funciones principales:
+Este archivo contiene funciones clave para:
 
 #### 🔸 `sendLogToLoki(message, level, app)`
 
-Envía logs a Loki en formato JSON con las siguientes etiquetas:
-- `level`: nivel de log (info, debug, error, etc.)
+Envía logs directamente a Loki vía HTTP, con etiquetas:
+- `level`: nivel de log (`info`, `debug`, `error`, etc.)
 - `app`: nombre de la app (por ejemplo `"test"`)
+- `file_uuid`: generado automáticamente por `ulid`
 
-#### 🔸 `getLogsFromLoki(logql)`
+#### 🔸 `getLogsByUUID(uuid)`
 
-Consulta los logs de los últimos 5 minutos usando la API `/loki/api/v1/query_range`.
+Consulta logs históricos desde Loki usando LogQL con la etiqueta `file_uuid`.
 
-- Usa el lenguaje LogQL.
-- Muestra todos los mensajes recuperados de forma estructurada.
+#### 🔸 `generateTestLogs()`
 
-#### 🔸 `getLatestLogsFromLokiInstant(logql)`
+Genera múltiples logs de distintos niveles y los envía a Loki.
 
-Consulta los logs **recientes** (último estado), sin definir rango de tiempo, mediante `/loki/api/v1/query`.
+#### 🔸 `handleGetLogsByUUID`
+
+API HTTP que permite recuperar logs usando un `file_uuid`.
 
 ---
 
@@ -54,7 +60,7 @@ git clone https://github.com/tuusuario/logs.git
 cd logs
 ```
 
-2. Levanta **Grafana** y **Loki** con Docker Compose:
+2. Levanta **Grafana**, **Loki** y **Promtail** con Docker Compose:
 
 ```bash
 docker-compose up -d
@@ -64,6 +70,7 @@ Esto iniciará:
 
 - Loki en `http://localhost:3100`
 - Grafana en `http://localhost:3000` (usuario: `admin`, contraseña: `admin`)
+- Promtail levantado en `http://localhost:9080` recolectando logs de `./promtail-test/logs`
 
 3. Ejecuta el programa Go para enviar y consultar logs:
 
@@ -75,6 +82,11 @@ Verás en consola:
 - Mensajes enviados a Loki.
 - Logs recuperados con consultas LogQL.
 
+4. También puedes generar logs directamente desde consola:
+
+```bash
+echo '{"file_uuid":"01HYTESTUUID1234567894","level":"DEBUG","msg":"EJEMPLO DE LOG1"}' >> promtail-test/logs/testfile.log
+```
 ---
 
 ## 🐳 Docker Compose
@@ -90,6 +102,8 @@ services:
     ports:
       - "3100:3100"
     command: -config.file=/etc/loki/local-config.yaml
+    volumes:
+      - ./loki-data:/loki
 
   grafana:
     image: grafana/grafana:10.4.2
@@ -97,9 +111,56 @@ services:
       - "3000:3000"
     environment:
       - GF_SECURITY_ADMIN_PASSWORD=admin
+
+  promtail:
+    image: grafana/promtail:2.9.0
+    volumes:
+      - ./promtail-test/logs:/var/log/mylogs
+      - ./promtail-config.yml:/etc/promtail/config.yml
+    command: -config.file=/etc/promtail/config.yml
+    depends_on:
+      - loki
 ```
 
 > **Nota:** Una vez iniciado Grafana, debes configurar Loki como "Data Source" apuntando a `http://loki:3100`.
+
+---
+
+## 📂 Promtail
+
+Archivo de configuración típico: `promtail-config.yml`
+
+```yaml
+server:
+  http_listen_port: 9080
+  grpc_listen_port: 0
+
+positions:
+  filename: /tmp/positions.yaml
+
+clients:
+  - url: http://loki:3100/loki/api/v1/push
+
+scrape_configs:
+  - job_name: local-logs
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: local-logs
+          __path__: /var/log/mylogs/*.log
+    pipeline_stages:
+      - json:
+          expressions:
+            file_uuid: ""
+            level: ""
+            msg: ""
+      - labels:
+          file_uuid:
+          level:
+```
+
+Este Promtail recoge automáticamente logs en formato JSON desde archivos `.log` y extrae etiquetas como `file_uuid` y `level`.
 
 ---
 
@@ -107,19 +168,27 @@ services:
 
 Ejemplo de consulta usada en el código:
 
+Consulta básica por app:
 ```logql
 {app="test"}
 ```
 
 Esto selecciona todos los logs etiquetados con `app="test"`.
 
+Consulta específica por UUID:
+
+```logql
+{file_uuid="01HYTESTUUID1234567894"}
+```
+Esto selecciona todos los logs etiquetados con `file_uuid="01HYTESTUUID1234567894"`.
+
 ---
 
 ## 📘 Requisitos
 
-- Go 1.18 o superior
+- Go 1.21.6 o superior
 - Docker y Docker Compose
-- Acceso local a los puertos `3100` (Loki) y `3000` (Grafana)
+- Acceso local a los puertos `9080`(Promtail) `3100` (Loki) y `3000` (Grafana) 
 
 ---
 
