@@ -13,4 +13,8 @@ Este directorio contiene los archivos `.log` que son recolectados automáticamen
 ## 📝 Ejemplo de línea válida:
 
 ```json
-{"file_uuid":"01HYTESTUUID1234567894","level":"DEBUG","msg":"Mensaje de prueba desde archivo"}
+{"file_uuid":"01HYTESTUUID1234567894","level":"info","msg":"EJEMPLO DE LOG1"}
+{"file_uuid":"01HYTESTUUID1234567894","level":"debug","msg":"EJEMPLO DE LOG1"}
+{"file_uuid":"01HYTESTUUID1234567894","level":"warn","msg":"EJEMPLO DE LOG1"}
+{"file_uuid":"01HYTESTUUID1234567894","level":"error","msg":"EJEMPLO DE LOG1"}
+```

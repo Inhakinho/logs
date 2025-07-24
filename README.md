@@ -85,7 +85,10 @@ Verás en consola:
 4. También puedes generar logs directamente desde consola:
 
 ```bash
-echo '{"file_uuid":"01HYTESTUUID1234567894","level":"DEBUG","msg":"EJEMPLO DE LOG1"}' >> promtail-test/logs/testfile.log
+echo '{"file_uuid":"01HYTESTUUID1234567877","level":"info","msg":"EJEMPLO DE LOG1"}' >> promtail-test/logs/testfile.log
+echo '{"file_uuid":"01HYTESTUUID1234567877","level":"debug","msg":"EJEMPLO DE LOG1"}' >> promtail-test/logs/testfile.log
+echo '{"file_uuid":"01HYTESTUUID1234567877","level":"warn","msg":"EJEMPLO DE LOG1"}' >> promtail-test/logs/testfile.log
+echo '{"file_uuid":"01HYTESTUUID1234567877","level":"error","msg":"EJEMPLO DE LOG1"}' >> promtail-test/logs/testfile.log
 ```
 ---
 
